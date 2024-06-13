@@ -1,7 +1,7 @@
 app-1:
   events:
     # notify all error logs from app-1
-    log:err
+    log:err:
 
 app-2:
   events:
