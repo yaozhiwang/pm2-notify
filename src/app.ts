@@ -36,7 +36,7 @@ async function sendMail(): Promise<void> {
 
     for (const data of qdata.splice(0, qdata.length)) {
       if (config.target[data.name].events[event].ignores) {
-        const ignore = config.target[data.name].events[event].ignores?.every(
+        const ignore = config.target[data.name].events[event].ignores?.some(
           (pattern) => new RegExp(pattern).test(data.message),
         );
         if (ignore) {
@@ -45,7 +45,7 @@ async function sendMail(): Promise<void> {
         }
       }
       if (config.target[data.name].events[event].matches) {
-        const match = config.target[data.name].events[event].matches?.every(
+        const match = config.target[data.name].events[event].matches?.some(
           (pattern) => new RegExp(pattern).test(data.message),
         );
         if (match) {
