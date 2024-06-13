@@ -1,0 +1,16 @@
+app-1:
+  events:
+    # notify all error logs from app-1
+    log:err:
+
+app-2:
+  events:
+    log:err:
+      # notify error logs except lines has pattern in ignores
+      ignores: 
+        - "AAA"
+        - "BBB"
+    log:out:
+      # notify out logs only lines has pattern in matches
+      matches: 
+        - "CCC"

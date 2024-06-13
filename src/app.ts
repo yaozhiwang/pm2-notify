@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+/* eslint-disable no-continue */
 import fs from 'node:fs';
 import handlebars from 'handlebars';
 import he from 'he';
@@ -9,16 +10,21 @@ import { EventEmitter } from 'node:stream';
 import { promisify } from 'node:util';
 
 import { config } from './config.js';
-import { Target, Packet, Log, QData } from './types.js';
+import { Packet, Log, QData, AppEvent } from './types.js';
 
 const template = handlebars.compile(fs.readFileSync(config.template, 'utf8'));
 const transporter = createTransport(config.smtp, { ...config.mail });
 
-const events = <[Target]>Object.keys(config.target);
-const queues = <Record<Target, QData[]>>{};
+const events = new Set<AppEvent>();
+Object.values(config.target).forEach(
+  (app) => Object.keys(app.events).forEach(
+    (e) => events.add(e as AppEvent),
+  ),
+);
+const queues = <Record<AppEvent, QData[]>>{};
 let timeout: NodeJS.Timer | null = null;
 
-events.forEach((event: Target) => {
+events.forEach((event: AppEvent) => {
   queues[event] = [];
 });
 
@@ -29,6 +35,25 @@ async function sendMail(): Promise<void> {
     const content: Record<string, string> = {};
 
     for (const data of qdata.splice(0, qdata.length)) {
+      if (config.target[data.name].events[event].ignores) {
+        const ignore = config.target[data.name].events[event].ignores?.every(
+          (pattern) => new RegExp(pattern).test(data.message),
+        );
+        if (ignore) {
+          console.log(`Drop message from ${data.name}: ${data.message}`);
+          continue;
+        }
+      }
+      if (config.target[data.name].events[event].matches) {
+        const match = config.target[data.name].events[event].matches?.every(
+          (pattern) => new RegExp(pattern).test(data.message),
+        );
+        if (match) {
+          content[data.name] = content[data.name] || '';
+          content[data.name] += data.message;
+        }
+        continue;
+      }
       content[data.name] = content[data.name] || '';
       content[data.name] += data.message;
     }
@@ -39,6 +64,10 @@ async function sendMail(): Promise<void> {
   }
 
   try {
+    if (logs.length === 0) {
+      return;
+    }
+
     const content = template({ logs });
     const { errors, html } = mjml2html(content);
     if (errors.length > 0) {
@@ -54,8 +83,8 @@ async function sendMail(): Promise<void> {
   }
 }
 
-function eventBus(event: Target, packet: Packet): void {
-  if (!config.target[event].includes(packet.process.name)) {
+function eventBus(event: AppEvent, packet: Packet): void {
+  if (!(packet.process.name in config.target)) {
     return;
   }
 

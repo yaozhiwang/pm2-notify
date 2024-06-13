@@ -1,14 +1,17 @@
 import 'dotenv/config';
+import fs from 'node:fs';
 import { hostname, userInfo } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import YAML from 'yaml';
+import { Target } from './types.js';
 
 const { env } = process;
 const {
   NODE_ENV = 'localhost',
   USER = userInfo().username,
   HOSTNAME = hostname(),
-  PM2_APPS = '',
+  PM2_APPS = '.apps.yaml',
 } = env;
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,11 +38,7 @@ export const config = {
    * appName is the value assigned to `--name` in PM2
    * ['api', 'server', 'admin', ...]
    */
-  target: {
-    'log:err': PM2_APPS.split(',').map((appName) => appName.trim()),
-    // 'log:err': ['appName'], // stderr
-    // 'log:out': ['appName'], // stdout, As required
-  },
+  target: YAML.parse(fs.readFileSync(PM2_APPS, 'utf8')) as Target,
   // MJML template
   template: `${dirname}/../views/template.html`,
   // Send mail every timeout(ms)
