@@ -1,6 +1,15 @@
 import { config } from './config.js';
 
-export type Target = keyof typeof config.target;
+export type LogEvent = "log:out" | "log:err";
+
+export interface TargetEventParams {
+  ignores?:string[]
+  matches?:string[]
+}
+
+export interface Target {
+  events: {[key: LogEvent]: TargetEventParams}
+}
 
 export interface Packet {
   id: number;

@@ -14,6 +14,7 @@ import { Target, Packet, Log, QData } from './types.js';
 const template = handlebars.compile(fs.readFileSync(config.template, 'utf8'));
 const transporter = createTransport(config.smtp, { ...config.mail });
 
+config.target.map((app) => {
 const events = <[Target]>Object.keys(config.target);
 const queues = <Record<Target, QData[]>>{};
 let timeout: NodeJS.Timer | null = null;
