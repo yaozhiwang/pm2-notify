@@ -1,8 +1,10 @@
 import 'dotenv/config';
+import fs from 'node:fs';
 import { hostname, userInfo } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
+import { Target } from './types.js';
 
 const { env } = process;
 const {
@@ -36,7 +38,7 @@ export const config = {
    * appName is the value assigned to `--name` in PM2
    * ['api', 'server', 'admin', ...]
    */
-  target: YAML.parse(fs.readFileSync(PM2_APPS, 'utf8')),
+  target: YAML.parse(fs.readFileSync(PM2_APPS, 'utf8')) as Target,
   // MJML template
   template: `${dirname}/../views/template.html`,
   // Send mail every timeout(ms)
