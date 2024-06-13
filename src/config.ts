@@ -23,6 +23,9 @@ export const config = {
     from: env.MAIL_FROM || 'me <from@test.com>',
     to: env.MAIL_TO || 'to@test.com',
   },
+  processEventMail: {
+    subject: `Process Error - ${USER}@${HOSTNAME}:${NODE_ENV}`,
+  },
   // https://nodemailer.com/smtp
   smtp: {
     host: env.SMTP_HOST || 'smtp.gmail.com',
@@ -39,8 +42,10 @@ export const config = {
    * ['api', 'server', 'admin', ...]
    */
   target: YAML.parse(fs.readFileSync(PM2_APPS, 'utf8')) as Target,
+  processEvent: Boolean(env.PROCESS_EVENT) || true,
   // MJML template
   template: `${dirname}/../views/template.html`,
   // Send mail every timeout(ms)
   timeout: Number(env.SEND_INTERVAL) || 10000,
+
 };

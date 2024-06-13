@@ -35,3 +35,10 @@ export interface QData {
   name: string
   message: string
 }
+
+export interface ProcessEventPacket {
+  // https://github.com/rrrene/PM2/blob/master/doc/EVENTS.md
+  event: 'restart' | 'delete' | 'stop' | 'restart overlimit' | 'exit' | 'start' | 'online',
+  manually: boolean
+  process: { name: string }
+}

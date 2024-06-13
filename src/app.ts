@@ -10,7 +10,7 @@ import { EventEmitter } from 'node:stream';
 import { promisify } from 'node:util';
 
 import { config } from './config.js';
-import { Packet, Log, QData, AppEvent } from './types.js';
+import { Packet, Log, QData, AppEvent, ProcessEventPacket } from './types.js';
 
 const template = handlebars.compile(fs.readFileSync(config.template, 'utf8'));
 const transporter = createTransport(config.smtp, { ...config.mail });
@@ -74,8 +74,8 @@ async function sendMail(): Promise<void> {
       throw new Error(JSON.stringify(errors));
     }
 
-    const info = await transporter.sendMail({ html });
-    console.log('SendMail', info);
+    await transporter.sendMail({ html });
+    console.log('SendLogEventEmail');
   } catch (err) {
     console.error(err);
   } finally {
@@ -100,6 +100,38 @@ function eventBus(event: AppEvent, packet: Packet): void {
   }
 }
 
+const processEventQueue = <{ event:string, name:string }[]>[];
+let processEventTimeout: NodeJS.Timer | null = null;
+async function sendProcessEventMail(): Promise<void> {
+  try {
+    await transporter.sendMail({
+      ...config.processEventMail,
+      text: JSON.stringify(processEventQueue, null, 2),
+    });
+    console.log('sendProcessEventMail');
+  } catch (err) {
+    console.error(err);
+  } finally {
+    timeout = null;
+  }
+}
+
+function processEventBus(packet: ProcessEventPacket): void {
+  if (packet.manually) {
+    return;
+  }
+
+  processEventQueue.push({
+    event: packet.event,
+    name: packet.process.name,
+  });
+
+  if (!processEventTimeout) {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    processEventTimeout = setTimeout(sendProcessEventMail, config.timeout);
+  }
+}
+
 (async (): Promise<void> => {
   // https://github.com/nodejs/node/issues/13338#issuecomment-546494270
   await promisify(pm2.connect).bind(pm2)();
@@ -112,4 +144,7 @@ function eventBus(event: AppEvent, packet: Packet): void {
     console.log(`[PM2] ${event} streaming started`);
     bus.on(event, (packet: Packet) => eventBus(event, packet));
   }
+
+  console.log('[PM2] process:event streaming started');
+  bus.on('process:event', (packet: ProcessEventPacket) => processEventBus(packet));
 })().catch(console.error);
