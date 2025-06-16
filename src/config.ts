@@ -47,9 +47,8 @@ export const config = {
   template: `${dirname}/../views/template.html`,
   // Send mail every timeout(ms)
   timeout: {
-    baseTimeout: 10000, // Base timeout (ms)
+    baseTimeout: 1000, // Base timeout (ms)
     maxTimeout: 600000, // Maximum throttle time (ms)
-    minTimeout: 10000, // Minimum throttle time (ms)
     measureWindow: 10000, // Window to measure message rate (ms)
     burstThreshold: 1, // Number of messages in window that constitutes a burst
     factor: 6,

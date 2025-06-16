@@ -50,9 +50,10 @@ function startNewMeasurementWindow(
 
 // Calculate next timeout based on fixed window message count
 function calculateNextTimeout(messageCount: number): number {
+  console.log(messageCount);
   if (messageCount <= config.timeout.burstThreshold) {
     // Normal traffic
-    return config.timeout.minTimeout;
+    return config.timeout.baseTimeout;
   } else {
     // Scale timeout based on message count relative to threshold
     const scaleFactor =
