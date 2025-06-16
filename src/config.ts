@@ -51,7 +51,7 @@ export const config = {
     maxTimeout: 600000, // Maximum throttle time (ms)
     minTimeout: 10000, // Minimum throttle time (ms)
     measureWindow: 10000, // Window to measure message rate (ms)
-    burstThreshold: 10, // Number of messages in window that constitutes a burst
+    burstThreshold: 1, // Number of messages in window that constitutes a burst
     factor: 6,
     maxMessageLength: 10000, // Maximum characters per message
     maxTotalLength: 100000, // Maximum total email content length
