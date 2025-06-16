@@ -42,14 +42,6 @@ events.forEach((event: AppEvent) => {
   queues[event] = [];
 });
 
-// Function to calculate total messages across app event queues
-function getAppEventQueueSize(): number {
-  return Object.values(queues).reduce(
-    (total, queue) => total + queue.length,
-    0,
-  );
-}
-
 // Function to update window timing and reset counters
 function startNewMeasurementWindow(
   state: typeof throttleState.appEvents,
@@ -85,41 +77,27 @@ function truncateMessage(message: string): string {
   return message;
 }
 
-// Generic function to send email with throttling
 async function sendEmailWithThrottling(
   sendFunction: () => Promise<void>,
-  queueSizeFunction: () => number,
   state: typeof throttleState.appEvents,
 ): Promise<void> {
-  try {
-    await sendFunction();
-
-    // Calculate next timeout based on message count in measurement window
-    const nextTimeout = calculateNextTimeout(state.recentMessageCount);
-    console.log(
-      `Fixed window message count: ${state.recentMessageCount}. Next timeout: ${nextTimeout}ms`,
-    );
-    state.currentTimeout = nextTimeout;
-  } catch (err) {
-    console.error(err);
-  } finally {
-    // Start a new measurement window
-    startNewMeasurementWindow(state);
-    state.timeout = null;
-
-    // If there are still items in the queue, schedule another send
-    const queueSize = queueSizeFunction();
-    if (queueSize > 0) {
-      console.log(
-        `Still ${queueSize} messages in queue. Scheduling next send in ${state.currentTimeout}ms`,
-      );
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      state.timeout = setTimeout(
-        () => sendEmailWithThrottling(sendFunction, queueSizeFunction, state),
-        state.currentTimeout,
-      );
-    }
+  if (state.timeout) {
+    return;
   }
+  state.currentTimeout = calculateNextTimeout(state.recentMessageCount);
+  if (state.currentTimeout !== config.timeout.baseTimeout) {
+    console.log(`Throttling: ${state.currentTimeout / 1000}s`);
+  }
+  state.timeout = setTimeout(async () => {
+    try {
+      await sendFunction();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      startNewMeasurementWindow(state);
+      state.timeout = null;
+    }
+  }, state.currentTimeout);
 }
 
 async function sendAppEventMail(): Promise<void> {
@@ -224,7 +202,7 @@ async function sendAppEventMail(): Promise<void> {
 
   await transporter.sendMail({ html });
   console.log(
-    `Email sent with ${totalMessageCount} log entries (throttle: ${throttleState.appEvents.currentTimeout}ms)`,
+    `Email sent with ${totalMessageCount} log entries (throttle: ${throttleState.appEvents.currentTimeout / 1000}ms)`,
   );
 }
 
@@ -264,7 +242,7 @@ async function sendProcessEventMail(): Promise<void> {
   });
 
   console.log(
-    `Process event email sent with ${processEventQueue.length} events (throttle: ${throttleState.processEvents.currentTimeout}ms)`,
+    `Process event email sent with ${processEventQueue.length} events (throttle: ${throttleState.processEvents.currentTimeout / 1000}ms)`,
   );
 
   // Clear the queue only after successful send
@@ -284,21 +262,13 @@ function eventBus(event: AppEvent, packet: Packet): void {
 
   const now = Date.now();
 
-  // Check if the current time is within our measurement window
-  // We only count messages in the last measureWindow ms before the next scheduled send
-  const windowEndTime =
-    throttleState.appEvents.windowStartTime + config.timeout.measureWindow;
-  if (now >= throttleState.appEvents.windowStartTime && now <= windowEndTime) {
+  if (now >= throttleState.appEvents.windowStartTime) {
     throttleState.appEvents.recentMessageCount++;
   }
 
-  if (!throttleState.appEvents.timeout) {
-    sendEmailWithThrottling(
-      sendAppEventMail,
-      getAppEventQueueSize,
-      throttleState.appEvents,
-    ).catch(console.error);
-  }
+  sendEmailWithThrottling(sendAppEventMail, throttleState.appEvents).catch(
+    console.error,
+  );
 }
 
 function processEventBus(packet: ProcessEventPacket): void {
@@ -313,23 +283,14 @@ function processEventBus(packet: ProcessEventPacket): void {
 
   const now = Date.now();
 
-  // Check if the current time is within our measurement window
-  const windowEndTime =
-    throttleState.processEvents.windowStartTime + config.timeout.measureWindow;
-  if (
-    now >= throttleState.processEvents.windowStartTime &&
-    now <= windowEndTime
-  ) {
+  if (now >= throttleState.processEvents.windowStartTime) {
     throttleState.processEvents.recentMessageCount++;
   }
 
-  if (!throttleState.processEvents.timeout) {
-    sendEmailWithThrottling(
-      sendProcessEventMail,
-      () => processEventQueue.length,
-      throttleState.processEvents,
-    ).catch(console.error);
-  }
+  sendEmailWithThrottling(
+    sendProcessEventMail,
+    throttleState.processEvents,
+  ).catch(console.error);
 }
 
 (async (): Promise<void> => {
