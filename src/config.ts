@@ -49,7 +49,6 @@ export const config = {
   timeout: {
     baseTimeout: 10000, // Base timeout (ms)
     maxTimeout: 600000, // Maximum throttle time (ms)
-    minTimeout: 10000, // Minimum throttle time (ms)
     measureWindow: 10000, // Window to measure message rate (ms)
     burstThreshold: 10, // Number of messages in window that constitutes a burst
     factor: 6,

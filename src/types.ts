@@ -34,6 +34,7 @@ export interface QData {
   event: string
   name: string
   message: string
+  date: number
 }
 
 export interface ProcessEventPacket {
