@@ -83,6 +83,7 @@ async function sendEmailWithThrottling(
     return;
   }
   state.currentTimeout = calculateNextTimeout(state.recentMessageCount);
+  startNewMeasurementWindow(state);
   if (state.currentTimeout !== config.timeout.baseTimeout) {
     console.log(`Throttling: ${state.currentTimeout / 1000}s`);
   }
@@ -92,7 +93,6 @@ async function sendEmailWithThrottling(
     } catch (err) {
       console.error(err);
     } finally {
-      startNewMeasurementWindow(state);
       state.timeout = null;
     }
   }, state.currentTimeout);
@@ -200,7 +200,7 @@ async function sendAppEventMail(): Promise<void> {
 
   //  await transporter.sendMail({ html });
   console.log(
-    `Email sent with ${totalMessageCount} log entries (throttle: ${throttleState.appEvents.currentTimeout / 1000}ms)`,
+    `Email sent with ${totalMessageCount} log entries (throttle: ${throttleState.appEvents.currentTimeout / 1000}s)`,
   );
 }
 
@@ -240,7 +240,7 @@ async function sendProcessEventMail(): Promise<void> {
   // });
 
   console.log(
-    `Process event email sent with ${processEventQueue.length} events (throttle: ${throttleState.processEvents.currentTimeout / 1000}ms)`,
+    `Process event email sent with ${processEventQueue.length} events (throttle: ${throttleState.processEvents.currentTimeout / 1000}s)`,
   );
 
   // Clear the queue only after successful send
@@ -281,11 +281,6 @@ function processEventBus(packet: ProcessEventPacket): void {
 
   const now = Date.now();
 
-  console.log(
-    now,
-    throttleState.processEvents.windowStartTime,
-    now >= throttleState.processEvents.windowStartTime,
-  );
   if (now >= throttleState.processEvents.windowStartTime) {
     throttleState.processEvents.recentMessageCount++;
   }
