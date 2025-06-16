@@ -50,7 +50,6 @@ function startNewMeasurementWindow(
 
 // Calculate next timeout based on fixed window message count
 function calculateNextTimeout(messageCount: number): number {
-  console.log(messageCount);
   if (messageCount <= config.timeout.burstThreshold) {
     // Normal traffic
     return config.timeout.baseTimeout;
@@ -282,6 +281,11 @@ function processEventBus(packet: ProcessEventPacket): void {
 
   const now = Date.now();
 
+  console.log(
+    now,
+    throttleState.processEvents.windowStartTime,
+    now >= throttleState.processEvents.windowStartTime,
+  );
   if (now >= throttleState.processEvents.windowStartTime) {
     throttleState.processEvents.recentMessageCount++;
   }
