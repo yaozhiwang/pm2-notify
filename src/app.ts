@@ -4,7 +4,6 @@ import fs from "node:fs";
 import handlebars from "handlebars";
 import he from "he";
 import mjml2html from "mjml";
-import { createTransport } from "nodemailer";
 import pm2 from "pm2";
 import { EventEmitter } from "node:stream";
 import { promisify } from "node:util";
@@ -13,7 +12,6 @@ import { config } from "./config.js";
 import { Packet, Log, QData, AppEvent, ProcessEventPacket } from "./types.js";
 
 const template = handlebars.compile(fs.readFileSync(config.template, "utf8"));
-const transporter = createTransport(config.smtp, { ...config.mail });
 
 const events = new Set<AppEvent>();
 Object.values(config.target).forEach((app) =>
@@ -195,12 +193,12 @@ async function sendAppEventMail(): Promise<void> {
   }
 
   const content = template({ logs });
-  const { errors, html } = mjml2html(content);
+  const { errors } = mjml2html(content);
   if (errors.length > 0) {
     throw new Error(JSON.stringify(errors));
   }
 
-  await transporter.sendMail({ html });
+  //  await transporter.sendMail({ html });
   console.log(
     `Email sent with ${totalMessageCount} log entries (throttle: ${throttleState.appEvents.currentTimeout / 1000}ms)`,
   );
@@ -236,10 +234,10 @@ async function sendProcessEventMail(): Promise<void> {
     );
   }
 
-  await transporter.sendMail({
-    ...config.processEventMail,
-    text: emailText,
-  });
+  //  await transporter.sendMail({
+  //   ...config.processEventMail,
+  //   text: emailText,
+  // });
 
   console.log(
     `Process event email sent with ${processEventQueue.length} events (throttle: ${throttleState.processEvents.currentTimeout / 1000}ms)`,
